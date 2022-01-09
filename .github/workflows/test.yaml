@@ -6,8 +6,6 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
     runs-on: ${{ matrix.platform }}
     strategy:
       max-parallel: 9
