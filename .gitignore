@@ -1,0 +1,7 @@
+.venv
+.tox
+.env
+
+**/__pycache__
+
+dist
