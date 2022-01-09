@@ -18,6 +18,10 @@ flake8 = "^4.0.1"
 tox-asdf = "^0.1.0"
 pytest = "^6.2.5"
 
+[tool.poetry-dynamic-versioning]
+enable = true
+style = "pep440"
+
 [tool.black]
 line-length = 100
 exclude = '''
