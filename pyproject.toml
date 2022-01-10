@@ -55,7 +55,7 @@ profile = "black"
 pythonVersion = "3.8"
 
 [tool.pytest.ini_options]
-addopts = "--cov=src --cov-report term --cov-report xml"
+addopts = "--cov=src --cov-report=term-missing:skip-covered --cov-report term --cov-report xml"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
