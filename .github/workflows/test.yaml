@@ -3,8 +3,13 @@ name: pytest
 on:
   push:
     branches: [master]
-    pull_request:
-      types: [opened, synchronize]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test.yaml"
+  pull_request:
+    types: [opened, synchronize]
     paths:
       - "src/**"
       - "tests/**"
