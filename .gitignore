@@ -1,7 +1,10 @@
 .venv
 .tox
 .env
+.coverage
 
 **/__pycache__
+**/*.ipynb
 
 dist
+coverage.xml
