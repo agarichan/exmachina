@@ -3,8 +3,13 @@ name: pytest
 on:
   push:
     branches: [master]
-    pull_request:
-      types: [opened, synchronize]
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - ".github/workflows/test.yaml"
+  pull_request:
+    types: [opened, synchronize]
     paths:
       - "src/**"
       - "tests/**"
@@ -15,7 +20,7 @@ jobs:
   test:
     runs-on: ${{ matrix.platform }}
     strategy:
-      max-parallel: 9
+      max-parallel: 3
       matrix:
         platform: [ubuntu-latest]
         python-version: ["3.8", "3.9", "3.10"]
