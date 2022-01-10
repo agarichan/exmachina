@@ -27,6 +27,9 @@ pyright = "^0.0.13"
 enable = true
 style = "pep440"
 
+[tool.poetry-dynamic-versioning.substitution]
+files = ["src/*/__init__.py"]
+
 [tool.poe.tasks]
 fmt = { shell = "isort src tests; black src tests" }
 lint = { shell = "flake8 src tests && pyright src tests" }
