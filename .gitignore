@@ -2,6 +2,7 @@
 .tox
 .env
 .coverage
+.vscode
 
 **/__pycache__
 **/*.ipynb
