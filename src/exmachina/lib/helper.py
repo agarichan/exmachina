@@ -80,15 +80,30 @@ class TimeSemaphore:
         """
         self._value = time_calls_limit
         self._time_limit = time_limit
-        self._loop = asyncio.get_running_loop()  # 3.7~
+        self.__loop = None
         self._waiters = deque()
-        self._sem = _DummySemaphore() if entire_calls_limit is None else asyncio.Semaphore(entire_calls_limit)
+        self.entire_calls_limit = entire_calls_limit
+        self.__sem = None
 
     async def __aenter__(self) -> None:
         await self.acquire()
 
     async def __aexit__(self, *args) -> None:
         self.release()
+
+    @property
+    def _loop(self):
+        if self.__loop is None:
+            self.__loop = asyncio.events.get_event_loop()  # 3.7~
+        return self.__loop
+
+    @property
+    def _sem(self):
+        if self.__sem is None:
+            self.__sem = (
+                _DummySemaphore() if self.entire_calls_limit is None else asyncio.Semaphore(self.entire_calls_limit)
+            )
+        return self.__sem
 
     async def acquire(self) -> bool:
         await self._sem.acquire()
@@ -101,7 +116,7 @@ class TimeSemaphore:
             self._waiters.append(fut)
             try:
                 await fut
-            except:
+            except BaseException:
                 fut.cancel()
                 if self._value > 0 and not fut.cancelled():
                     self._value -= 1

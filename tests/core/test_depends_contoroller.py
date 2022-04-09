@@ -1,11 +1,11 @@
 import pytest
 
+from exmachina.core.depends_contoroller import DependsContoroller
+from exmachina.core.exception import MachinaException
+
 # from exmachina import Depends
 from exmachina.core.params import Depends
 from exmachina.core.params_function import Depends as fDepends
-from exmachina.core.exception import MachinaException
-
-from exmachina.core.depends_contoroller import DependsContoroller
 
 
 def depends_function():

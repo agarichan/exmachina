@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Protocol
 
 
@@ -9,10 +10,9 @@ class MachinaProtocol(Protocol):
         """
         raise NotImplementedError
 
-    async def emitter(
+    async def emit(
         self,
-        name: str,
-        *,
+        name: str | None = None,
         count: int | None = None,
         interval: str = "0s",
         alive: bool = True,
@@ -44,11 +44,11 @@ class MachinaProtocol(Protocol):
         """
         raise NotImplementedError
 
-    async def executeor(self, name: str, *, concurrent_groups: list[str] = []):
+    async def execute(self, name: str | None = None, concurrent_groups: list[str] = []):
         """Executeorを登録するデコレーター
 
         Args:
-            name (str): 名前(Executeorでユニーク)
+            name (str): 名前(Executeorでユニーク省略すると)
             concurrent_groups (list[str], optional): 非同期IOの同時実行数の制限. Defaults to [].
         """
         raise NotImplementedError
