@@ -1,7 +1,10 @@
+.DS_Store
+
 .venv
 .tox
 .env
 .coverage
+.vscode
 
 **/__pycache__
 **/*.ipynb
