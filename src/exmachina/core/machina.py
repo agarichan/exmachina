@@ -123,6 +123,8 @@ class Machina:
             if self._unfinished_tasks > 0:
                 self._finished.clear()
                 await self._finished.wait()
+                for task in self._emit_tasks.values():
+                    await task
         finally:
             await self._shutdown()
 
@@ -168,6 +170,7 @@ class Machina:
 
     def emit(
         self,
+        *,
         name: str | None = None,
         count: int | None = None,
         interval: str = "0s",
@@ -205,7 +208,7 @@ class Machina:
 
         return decorator
 
-    def execute(self, name: str | None = None, concurrent_groups: list[str] = []):
+    def execute(self, *, name: str | None = None, concurrent_groups: list[str] = []):
         def decorator(func: DecoratedResultCallable) -> DecoratedResultCallable:
             _name = func.__name__ if name is None else name
             _concurrent_groups = [self._concurrent_groups[cg_name] for cg_name in concurrent_groups]
@@ -294,6 +297,8 @@ def cancelled_wrapper(name: str, type: Literal["emit", "execute"], logger: loggi
                 return await afunc()
             except asyncio.CancelledError:
                 logger.debug(f'Cancelled {type} task: "{name}"')
+            except BaseException:
+                logger.error(f'Uncatched error {type} task: "{name}"', exc_info=True)
                 raise
 
         return _inner
