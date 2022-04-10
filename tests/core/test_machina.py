@@ -149,3 +149,12 @@ class TestMachina:
         await bot.run()
 
         assert all(expect.values())
+
+    @pytest.mark.asyncio
+    async def test_error(self, bot: Machina):
+        @bot.emit(count=1)
+        async def emit_error():
+            raise ZeroDivisionError
+
+        with pytest.raises(ZeroDivisionError):
+            await bot.run()
