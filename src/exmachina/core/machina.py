@@ -295,6 +295,9 @@ def cancelled_wrapper(name: str, type: Literal["emit", "execute"], logger: loggi
             except asyncio.CancelledError:
                 logger.debug(f'Cancelled {type} task: "{name}"')
                 raise
+            except BaseException:
+                logger.error(f'Uncatched error {type} task: "{name}"', exc_info=True)
+                raise
 
         return _inner
 
