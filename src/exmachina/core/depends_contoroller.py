@@ -56,3 +56,7 @@ class DependsContoroller:
         if depends.use_cache:
             cls.caches[func] = res
         return res
+
+
+async def get_depends(func: Callable[..., Any]) -> Any:
+    return await DependsContoroller.recurrent_execute_depends(Depends(func))
