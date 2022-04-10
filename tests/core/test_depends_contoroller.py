@@ -1,6 +1,6 @@
 import pytest
 
-from exmachina.core.depends_contoroller import DependsContoroller
+from exmachina.core.depends_contoroller import DependsContoroller, get_depends
 from exmachina.core.exception import MachinaException
 
 # from exmachina import Depends
@@ -87,3 +87,15 @@ def test_repr():
         return x
 
     assert str(Depends(a, use_cache=False)) == "Depends(a, use_cache=False)"
+
+
+@pytest.mark.asyncio
+async def test_get_depends():
+    async def get():
+        a = 42
+        try:
+            yield a
+        finally:
+            ...
+
+    assert 42 == await get_depends(get)
