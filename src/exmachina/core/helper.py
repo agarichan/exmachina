@@ -9,7 +9,7 @@ except ImportError:
 
 try:
     from rich.logging import RichHandler
-except ImportError:
+except ModuleNotFoundError:
     raise ImportError("pip install exmachina[rich]")
 
 
