@@ -8,9 +8,9 @@ from collections import defaultdict
 from dataclasses import InitVar, dataclass, field
 from functools import partial
 from time import perf_counter
-from typing import Any, Awaitable, Callable, NoReturn, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, NoReturn, TypeVar
 
-from exmachina.lib.helper import TimeSemaphore, interval_to_second
+from exmachina.lib.helper import TimeSemaphore, execute_functions, interval_to_second
 
 from . import exception as E
 from .depends_contoroller import DependsContoroller
@@ -82,7 +82,11 @@ class TaskManager:
 
 class Machina:
     def __init__(
-        self, *, verbose: Literal["NOTEST", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
+        self,
+        *,
+        on_startup: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]] = [],
+        on_shutdown: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]] = [],
+        verbose: Literal["NOTEST", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None,
     ) -> None:
         self._emits: dict[str, Emit] = {}
         self._executes: dict[str, Execute] = {}
@@ -90,6 +94,8 @@ class Machina:
         self._emit_tasks: dict[str, asyncio.Task] = {}
         self._execute_tasks: dict[str, list[asyncio.Task]] = defaultdict(list)
         self._execute_task_executings: dict[str, int] = defaultdict(int)
+        self.on_startup = on_startup
+        self.on_shutdown = on_shutdown
         # 全てのタスクが終わったことを確認するようの変数
         self._unfinished_tasks = 0
         self.__finished = None
@@ -107,15 +113,25 @@ class Machina:
         """botを起動する関数
         全てのemitが停止するまで永遠に待機する
         """
+        await self._startup()
+
+        try:
+            for emit in self._emits.values():
+                if emit.alive:
+                    self._add_emit_task(emit.name)
+
+            if self._unfinished_tasks > 0:
+                self._finished.clear()
+                await self._finished.wait()
+        finally:
+            await self._shutdown()
+
+    async def _startup(self):
         self.__finished = None
+        await execute_functions(self.on_startup)
 
-        for emit in self._emits.values():
-            if emit.alive:
-                self._add_emit_task(emit.name)
-
-        if self._unfinished_tasks > 0:
-            self._finished.clear()
-            await self._finished.wait()
+    async def _shutdown(self):
+        await execute_functions(self.on_shutdown)
 
     def create_concurrent_group(
         self, name: str, entire_calls_limit: int | None = None, time_limit: float = 0, time_calls_limit: int = 1
