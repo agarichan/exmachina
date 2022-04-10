@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import functools
+import inspect
 import re
 from collections import deque
+from typing import Any, Callable, Coroutine
 
 _times = dict(d=86400.0, h=3600.0, m=60.0, s=1.0, ms=0.001)
 _r = (
@@ -136,3 +138,11 @@ class TimeSemaphore:
             if not waiter.done():
                 waiter.set_result(None)
                 return
+
+
+async def execute_functions(funcs: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]]):
+    for func in funcs:
+        if inspect.iscoroutinefunction(func):
+            await func()  # type: ignore
+        elif inspect.isfunction(func) or inspect.ismethod(func):
+            func()

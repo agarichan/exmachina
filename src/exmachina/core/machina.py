@@ -8,9 +8,9 @@ from collections import defaultdict
 from dataclasses import InitVar, dataclass, field
 from functools import partial
 from time import perf_counter
-from typing import Any, Awaitable, Callable, NoReturn, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, NoReturn, TypeVar
 
-from exmachina.lib.helper import TimeSemaphore, interval_to_second
+from exmachina.lib.helper import TimeSemaphore, execute_functions, interval_to_second
 
 from . import exception as E
 from .depends_contoroller import DependsContoroller
@@ -23,8 +23,6 @@ except ImportError:
 
 DecoratedCallable = TypeVar("DecoratedCallable", bound=Callable[..., Awaitable[None]])
 DecoratedResultCallable = TypeVar("DecoratedResultCallable", bound=Callable[..., Awaitable[Any]])
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -82,7 +80,12 @@ class TaskManager:
 
 class Machina:
     def __init__(
-        self, *, verbose: Literal["NOTEST", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None
+        self,
+        *,
+        on_startup: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]] = [],
+        on_shutdown: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]] = [],
+        logger: logging.Logger | None = None,
+        verbose: Literal["NOTEST", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None,
     ) -> None:
         self._emits: dict[str, Emit] = {}
         self._executes: dict[str, Execute] = {}
@@ -90,6 +93,9 @@ class Machina:
         self._emit_tasks: dict[str, asyncio.Task] = {}
         self._execute_tasks: dict[str, list[asyncio.Task]] = defaultdict(list)
         self._execute_task_executings: dict[str, int] = defaultdict(int)
+        self.on_startup = on_startup
+        self.on_shutdown = on_shutdown
+        self.logger = logger or logging.getLogger(__name__)
         # 全てのタスクが終わったことを確認するようの変数
         self._unfinished_tasks = 0
         self.__finished = None
@@ -107,15 +113,25 @@ class Machina:
         """botを起動する関数
         全てのemitが停止するまで永遠に待機する
         """
+        await self._startup()
+
+        try:
+            for emit in self._emits.values():
+                if emit.alive:
+                    self._add_emit_task(emit.name)
+
+            if self._unfinished_tasks > 0:
+                self._finished.clear()
+                await self._finished.wait()
+        finally:
+            await self._shutdown()
+
+    async def _startup(self):
         self.__finished = None
+        await execute_functions(self.on_startup)
 
-        for emit in self._emits.values():
-            if emit.alive:
-                self._add_emit_task(emit.name)
-
-        if self._unfinished_tasks > 0:
-            self._finished.clear()
-            await self._finished.wait()
+    async def _shutdown(self):
+        await execute_functions(self.on_shutdown)
 
     def create_concurrent_group(
         self, name: str, entire_calls_limit: int | None = None, time_limit: float = 0, time_calls_limit: int = 1
@@ -215,12 +231,12 @@ class Machina:
         task = self._emit_tasks.get(name)
         if task is not None:
             if not task.done():
-                logger.warning(f"emit taskを起動しようとしましたが、すでに作動中です: [{name}]")
+                self.logger.warning(f"emit taskを起動しようとしましたが、すでに作動中です: [{name}]")
                 return name
 
         emit.alive = True
 
-        @cancelled_wrapper(name, "emit")
+        @cancelled_wrapper(name, "emit", self.logger)
         async def func():
             return await set_interval(emit, self)
 
@@ -237,7 +253,7 @@ class Machina:
         """
         self._unfinished_tasks -= 1
         emit.alive = False
-        logger.debug(f'Done emit task: "{emit.name}", remain tasks: {self._unfinished_tasks}')
+        self.logger.debug(f'Done emit task: "{emit.name}", remain tasks: {self._unfinished_tasks}')
         if self._unfinished_tasks == 0:
             self._finished.set()
 
@@ -248,7 +264,7 @@ class Machina:
 
         tasks = self._execute_tasks[name]
 
-        @cancelled_wrapper(name, "execute")
+        @cancelled_wrapper(name, "execute", self.logger)
         async def func():
             return await execute_wrapper(execute, self, *args, **kwargs)
 
@@ -270,7 +286,7 @@ class Machina:
             self._finished.set()
 
 
-def cancelled_wrapper(name: str, type: Literal["emit", "execute"]):
+def cancelled_wrapper(name: str, type: Literal["emit", "execute"], logger: logging.Logger):
     def decorator(afunc: Callable[[], Awaitable[Any]]):
         @functools.wraps(afunc)
         async def _inner():
@@ -293,7 +309,7 @@ def get_args(func) -> tuple[list[str], dict[str, Any]]:
 
 
 async def set_interval(emit: Emit, bot: Machina):
-    logger.debug(f'Start emit task: "{emit.name}"')
+    bot.logger.debug(f'Start emit task: "{emit.name}"')
     interval = interval_to_second(emit.interval)
     previous_execution_time = 0.0
     epoch = 1
@@ -329,7 +345,7 @@ async def set_interval(emit: Emit, bot: Machina):
         else:
             wait = interval - previous_execution_time
             if wait < 0:
-                logger.warning(f"指定されたインターバルより{-wait:.0f}秒以上遅延しています.")
+                bot.logger.warning(f"指定されたインターバルより{-wait:.0f}秒以上遅延しています.")
             await asyncio.sleep(0 if wait < 0 else wait)
 
 
@@ -342,7 +358,7 @@ async def execute_wrapper(execute: Execute, bot: Machina, *args, **kwargs):
             bot._execute_task_executings[execute.name] += 1
             _t = len(bot._execute_tasks[execute.name])
             _e = bot._execute_task_executings[execute.name]
-            logger.debug(f'Start execute task: "{execute.name}" [tasks={_t}, executings={_e}]')
+            bot.logger.debug(f'Start execute task: "{execute.name}" [tasks={_t}, executings={_e}]')
             res = await execute.func(*args, **kwargs)
             bot._execute_task_executings[execute.name] -= 1
             return res

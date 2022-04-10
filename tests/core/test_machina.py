@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 
 from exmachina.core.exception import MachinaException
@@ -126,3 +127,25 @@ class TestMachina:
                 event.execute("test_not_exist")
 
         await bot.run()
+
+    @pytest.mark.asyncio
+    async def test_start_shutdown(self):
+        expect = {"async_start": False, "start": False, "async_shutdown": False, "shutdown": False}
+
+        async def async_start():
+            expect["async_start"] = True
+
+        def start():
+            expect["start"] = True
+
+        async def async_shutdown():
+            expect["async_shutdown"] = True
+
+        def shutdown():
+            expect["shutdown"] = True
+
+        bot = Machina(on_startup=[async_start, start], on_shutdown=[async_shutdown, shutdown])
+
+        await bot.run()
+
+        assert all(expect.values())
