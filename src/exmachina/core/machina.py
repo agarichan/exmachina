@@ -65,8 +65,12 @@ class Event:
         else:
             self._bot._emits[emit_name].alive = False
 
-    def start(self, emit_name: str):
+    def start(self, emit_name: str) -> asyncio.Task:
         self._bot._add_emit_task(emit_name)
+        return self._bot._emit_tasks[emit_name]
+
+    def get(self, emit_name: str) -> asyncio.Task | None:
+        return self._bot._emit_tasks.get(emit_name)
 
     def execute(self, execute_name: str, *args, **kwargs) -> asyncio.Task:
         task = self._bot._add_execute_task(execute_name, *args, **kwargs)
@@ -85,7 +89,7 @@ class Machina:
         on_startup: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]] = [],
         on_shutdown: list[Callable[[], Coroutine[Any, Any, None]] | Callable[[], None]] = [],
         logger: logging.Logger | None = None,
-        verbose: Literal["NOTEST", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None,
+        verbose: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] | None = None,
     ) -> None:
         self._emits: dict[str, Emit] = {}
         self._executes: dict[str, Execute] = {}
@@ -100,7 +104,8 @@ class Machina:
         self._unfinished_tasks = 0
         self.__finished = None
 
-        set_verbose(verbose)
+        if verbose is not None:
+            set_verbose(logger, verbose)
 
     @property
     def _finished(self):
