@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -158,3 +159,9 @@ class TestMachina:
 
         with pytest.raises(ZeroDivisionError):
             await bot.run()
+
+    @patch("exmachina.core.machina.set_verbose")
+    def test_set_verbose(self, mock: MagicMock):
+        # set_verboseの呼び出し確認
+        Machina(verbose="DEBUG")
+        assert mock.call_count == 1
