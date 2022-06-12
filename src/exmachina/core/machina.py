@@ -15,6 +15,7 @@ from exmachina.lib.helper import TimeSemaphore, execute_functions, interval_to_s
 from . import exception as E
 from .depends_contoroller import DependsContoroller
 from .helper import set_verbose
+from .retry import Retry
 
 try:
     from typing import Literal  # type: ignore
@@ -40,6 +41,7 @@ class Execute:
     name: str
     func: Callable[..., Awaitable[Any]]
     concurrent_groups: list[ConcurrentGroup] = field(default_factory=list)
+    retry: Retry | None = None
 
 
 @dataclass
@@ -213,11 +215,11 @@ class Machina:
 
         return decorator
 
-    def execute(self, *, name: str | None = None, concurrent_groups: list[str] = []):
+    def execute(self, *, name: str | None = None, concurrent_groups: list[str] = [], retry: Retry | None = None):
         def decorator(func: DecoratedResultCallable) -> DecoratedResultCallable:
             _name = func.__name__ if name is None else name
             _concurrent_groups = [self._concurrent_groups[cg_name] for cg_name in concurrent_groups]
-            execute = Execute(name=_name, func=func, concurrent_groups=_concurrent_groups)
+            execute = Execute(name=_name, func=func, concurrent_groups=_concurrent_groups, retry=retry)
             if _name in self._executes:
                 raise E.MachinaException(f"このexecuteはすでには登録されています、別の名前にしてください: [{_name}]")
             self._executes[_name] = execute
@@ -360,6 +362,10 @@ async def set_interval(emit: Emit, bot: Machina):
 
 
 async def execute_wrapper(execute: Execute, bot: Machina, *args, **kwargs):
+
+    retry = execute.retry or (lambda func: func)
+
+    @retry
     async def nest(concurrent_groups: list[ConcurrentGroup]):
         if concurrent_groups != []:
             async with concurrent_groups[0].semaphore:
@@ -369,6 +375,8 @@ async def execute_wrapper(execute: Execute, bot: Machina, *args, **kwargs):
             _t = len(bot._execute_tasks[execute.name])
             _e = bot._execute_task_executings[execute.name]
             bot.logger.debug(f'Start execute task: "{execute.name}" [tasks={_t}, executings={_e}]')
+            # Dependsの実行
+            kwargs.update(await DependsContoroller.get_depends_result(execute.func))
             res = await execute.func(*args, **kwargs)
             bot._execute_task_executings[execute.name] -= 1
             return res

@@ -2,13 +2,20 @@ import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pytest_mock.plugin import MockerFixture
 
 from exmachina.core.exception import MachinaException
 from exmachina.core.machina import Event, Machina
+from exmachina.core.retry import Retry, RetryFixed
 
 
 @pytest.fixture(scope="class")
 def bot():
+    return Machina()
+
+
+@pytest.fixture(scope="function")
+def bot_func_only():
     return Machina()
 
 
@@ -128,6 +135,25 @@ class TestMachina:
                 event.execute("test_not_exist")
 
         await bot.run()
+
+    @pytest.mark.asyncio
+    async def test_execute_with_retry(self, bot_func_only: Machina, mocker: MockerFixture):
+        retry = Retry([RetryFixed(Exception, wait_time=0, retries=3)])
+
+        mock = mocker.MagicMock(side_effect=Exception("exception"))
+
+        @bot_func_only.execute(retry=retry)
+        async def test_execute2():
+            mock()
+
+        @bot_func_only.emit(count=1)
+        async def test_emit7():
+            await test_execute2()
+
+        with pytest.raises(Exception):
+            await bot_func_only.run()
+
+        assert mock.call_count == 4
 
     @pytest.mark.asyncio
     async def test_start_shutdown(self):
