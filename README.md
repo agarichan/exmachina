@@ -38,7 +38,7 @@ poetry add exmachina@latest
 
 
 ```python
-from exmachina import Event, Machina
+from exmachina import Event, Machina, Retry, RetryFixed
 
 bot = Machina()
 
@@ -57,8 +57,12 @@ async def emit(event: Event):
     res = await execute()
     assert res == 42
 
+# 特定の例外でリトライしたい場合
+retry = Retry([
+  RetryFixed(HTTPError, wait_time=1, retries=5),
+])
 
-@bot.execute(concurrent_groups=['limit'])
+@bot.execute(concurrent_groups=['limit'], retry=retry)
 async def execute():
     return 42
 ```
@@ -112,6 +116,10 @@ Emitは主にbotの制御を行い、Executeは計算処理や外部との通信
 - `concurrent_groups`
   - executeの所属するconcurrent_groupを配列で指定する
   - デフォルトは`[]`
+- `retry`
+  - Execute実行中に発生した例外をトリガーにリトライを行う設定を指定する
+  - `from exmachina import Retry`
+  - デフォルトは`None`
 
 ## Event
 
@@ -134,6 +142,12 @@ event.stop('emit_name')
 event.execute('execute_name', *args, **kwargs)
 ```
 
+または、直接呼び出し
+
+```python
+await execute_name(*args, **kwargs)
+````
+
 event.executeはexecuteのTaskを返す
 
 ### 属性
@@ -144,6 +158,35 @@ event.previous_execution_time # 直前のループの処理時間
 event.count # emitの残りの実行回数(未指定の場合はNone)
 ```
 
+## Retry
+
+Executeのリトライの設定を書くためのもの  
+特定の秒数を待機した後、そのまま再実行を行う
+
+- `rules`
+  - 指定するルールの配列
+- `logger`
+  - 自前のloggerを渡したい場合に使う
+
+### RetryRule
+
+- `RetryFixed`: 常に`wait_time`の間隔でリトライ
+- `RetryFibonacci`: 1,1,2,3,5,...とフィボナッチ数列秒の間隔でリトライ
+- `RetryRange`: `min`と`max`を指定し、その間の乱数秒の間隔でリトライ
+- `RetryExponentialAndJitter`: 指数関数倍的に最大の待機時間を伸ばしつつリトライ
+のいずれかを使用する
+
+共通引数
+- `exception`
+  - 指定する例外のクラス
+- `retries`
+  - リトライ回数. 省略すると`RecursionError`が出るまで再実行する
+  - デフォルトは`None`
+- `filter`
+  - 例外インスタンスを引数に`bool`を返す関数を指定
+  - Trueを返した場合にこのリトライ条件にマッチする
+  - HTTPのステータスコードなどで引っ掛けたいリトライ設定が異なる場合などを想定
+  - デフォルトは`None`. つまり、常に`True`を返す
 ## 開発
 
 ### init
