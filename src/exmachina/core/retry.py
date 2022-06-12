@@ -6,15 +6,17 @@ from dataclasses import dataclass
 from functools import wraps
 from logging import Logger, getLogger
 from random import uniform
-from typing import Callable, Generator, Optional, Type
+from typing import Callable, Generator, Optional, Type, TypeVar
+
+T = TypeVar("T", bound=BaseException)
 
 
 class RetryRule(ABC):
     def __init__(
         self,
-        exception: Type[BaseException],
+        exception: Type[T],
         retries: Optional[int] = None,
-        filter: Optional[Callable[[BaseException], bool]] = None,
+        filter: Optional[Callable[[T], bool]] = None,
     ):
         self.exception = exception
         self.retries = retries
@@ -62,11 +64,11 @@ class RetryRule(ABC):
 class RetryFixed(RetryRule):
     def __init__(
         self,
-        exception: Type[BaseException],
+        exception: Type[T],
         *,
         wait_time: float,
         retries: Optional[int] = None,
-        filter: Optional[Callable[[BaseException], bool]] = None,
+        filter: Optional[Callable[[T], bool]] = None,
     ):
         self.wait_time = wait_time
         super().__init__(exception=exception, retries=retries, filter=filter)
@@ -87,12 +89,12 @@ class RetryFibonacci(RetryRule):
 class RetryRange(RetryRule):
     def __init__(
         self,
-        exception: Type[BaseException],
+        exception: Type[T],
         *,
         min: float,
         max: float,
         retries: Optional[int] = None,
-        filter: Optional[Callable[[BaseException], bool]] = None,
+        filter: Optional[Callable[[T], bool]] = None,
     ):
         self.min = min
         self.max = max
@@ -106,12 +108,12 @@ class RetryRange(RetryRule):
 class RetryExponentialAndJitter(RetryRule):
     def __init__(
         self,
-        exception: Type[BaseException],
+        exception: Type[T],
         *,
         base_wait_time: float = 1.0,
         cap: float = 60 * 60,
         retries: Optional[int] = None,
-        filter: Optional[Callable[[BaseException], bool]] = None,
+        filter: Optional[Callable[[T], bool]] = None,
     ):
         self.base_wait_time = base_wait_time
         self.cap = cap
