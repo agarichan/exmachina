@@ -38,6 +38,8 @@ poetry add exmachina@latest
 
 
 ```python
+import asyncio
+
 from exmachina import Event, Machina, Retry, RetryFixed
 
 bot = Machina()
@@ -65,6 +67,12 @@ retry = Retry([
 @bot.execute(concurrent_groups=['limit'], retry=retry)
 async def execute():
     return 42
+
+if __name__ == "__main__":
+    try:
+        wasyncio.run(bot.run())
+    except KeyboardInterrupt:
+        print("終了")
 ```
 
 ### Emit
