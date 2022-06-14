@@ -147,13 +147,12 @@ class TestMachina:
             mock()
 
         @bot_func_only.emit(count=1)
-        async def test_emit7():
-            await test_execute2()
+        async def test_emit7(event: Event):
+            event.execute("test_execute2")
 
-        with pytest.raises(Exception):
-            await bot_func_only.run()
-
+        await bot_func_only.run()
         assert mock.call_count == 4
+        assert bot_func_only._execute_task_executings["test_execute2"] == 0
 
     @pytest.mark.asyncio
     async def test_start_shutdown(self):
