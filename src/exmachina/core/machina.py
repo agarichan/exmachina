@@ -375,10 +375,12 @@ async def execute_wrapper(execute: Execute, bot: Machina, *args, **kwargs):
             _t = len(bot._execute_tasks[execute.name])
             _e = bot._execute_task_executings[execute.name]
             bot.logger.debug(f'Start execute task: "{execute.name}" [tasks={_t}, executings={_e}]')
-            # Dependsの実行
-            kwargs.update(await DependsContoroller.get_depends_result(execute.func))
-            res = await execute.func(*args, **kwargs)
-            bot._execute_task_executings[execute.name] -= 1
+            try:
+                # Dependsの実行
+                kwargs.update(await DependsContoroller.get_depends_result(execute.func))
+                res = await execute.func(*args, **kwargs)
+            finally:
+                bot._execute_task_executings[execute.name] -= 1
             return res
 
     return await nest(execute.concurrent_groups)
