@@ -93,6 +93,14 @@ class TimeSemaphore:
     async def __aexit__(self, *args) -> None:
         self.release()
 
+    def __call__(self, func):
+        @functools.wraps(func)
+        async def wrap(*args, **kwargs):
+            async with self:
+                return await func(*args, **kwargs)
+
+        return wrap
+
     @property
     def _loop(self):
         if self.__loop is None:

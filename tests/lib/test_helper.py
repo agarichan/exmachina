@@ -104,3 +104,32 @@ async def test_TimeSemaphore():
     task2.cancel()
     assert sem._value == 1
     task1.cancel()
+
+
+@pytest.mark.asyncio
+async def test_TimeSemaphore_decorator():
+    # デコレータとしてTimeSemaphoreを使っても問題ないことを確認
+
+    sem = TimeSemaphore(entire_calls_limit=3, time_calls_limit=2, time_limit=0.1)
+
+    starts = []
+    start = time.time()
+
+    @sem
+    async def func(task_time: float):
+        starts.append(round(time.time() - start, 2))
+        await asyncio.sleep(task_time)
+
+    # 最初とその次のタスクを即時実行する、ただし三つ目は時間制約により0.1秒後に実行される、
+    # 四つ目は全体制約により最初のタスクが終了する0.2秒後以降に実行される
+    tasks = [
+        asyncio.create_task(func(0.2)),
+        asyncio.create_task(func(0.2)),
+        asyncio.create_task(func(0.1)),
+        asyncio.create_task(func(0)),
+    ]
+
+    await asyncio.wait(tasks)
+
+    assert starts[2] == 0.1  # 三つ目のタスクが実行されるのは0.1秒後
+    assert starts[3] == 0.2  # 1つめ乃至二つ目のタスクの終了を待つので0.2秒後
