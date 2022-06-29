@@ -10,7 +10,8 @@ from functools import partial
 from time import perf_counter
 from typing import Any, Awaitable, Callable, Coroutine, NoReturn, TypeVar
 
-from exmachina.lib.helper import TimeSemaphore, execute_functions, interval_to_second
+from exmachina.lib.helper import execute_functions, interval_to_second
+from exmachina.lib.time_semaphore import TimeSemaphore
 
 from . import exception as E
 from .depends_contoroller import DependsContoroller
