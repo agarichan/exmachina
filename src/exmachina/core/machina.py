@@ -11,12 +11,12 @@ from time import perf_counter
 from typing import Any, Awaitable, Callable, Coroutine, NoReturn, TypeVar
 
 from exmachina.lib.helper import execute_functions, interval_to_second
+from exmachina.lib.retry import Retry
 from exmachina.lib.time_semaphore import TimeSemaphore
 
 from . import exception as E
 from .depends_contoroller import DependsContoroller
 from .helper import set_verbose
-from .retry import Retry
 
 try:
     from typing import Literal  # type: ignore
