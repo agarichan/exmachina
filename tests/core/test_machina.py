@@ -6,7 +6,7 @@ from pytest_mock.plugin import MockerFixture
 
 from exmachina.core.exception import MachinaException
 from exmachina.core.machina import Event, Machina
-from exmachina.core.retry import Retry, RetryFixed
+from exmachina.lib.retry import Retry, RetryFixed
 
 
 @pytest.fixture(scope="class")

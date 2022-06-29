@@ -1,7 +1,7 @@
 import pytest
-
-from exmachina.core.retry import Retry, RetryExponentialAndJitter, RetryFibonacci, RetryFixed, RetryRange, RetryRule
 from pytest_mock.plugin import MockerFixture
+
+from exmachina.lib.retry import Retry, RetryExponentialAndJitter, RetryFibonacci, RetryFixed, RetryRange, RetryRule
 
 
 @pytest.mark.asyncio

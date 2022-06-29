@@ -45,7 +45,8 @@ class RetryRule(ABC):
                         else:
                             retry_count -= 1
                     sleep = next(wait_time)
-                    logger.warning(f"[Retry] {e.__class__.__name__}を検知: {sleep}秒後に再実行します (残り{retry_count}回)")
+                    cnt_text = "∞" if retry_count is None else retry_count
+                    logger.warning(f"[Retry] {e.__class__.__name__}を検知: {sleep}秒後に再実行します (残り{cnt_text}回)")
                     await asyncio.sleep(sleep)
                     return await inner(*args, **kwargs)
                 except BaseException:
