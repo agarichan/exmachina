@@ -9,3 +9,4 @@ from .core.depends_contoroller import get_depends  # noqa
 from .core.machina import Event, Machina  # noqa
 from .core.params_function import Depends  # noqa
 from .lib.retry import Retry, RetryExponentialAndJitter, RetryFibonacci, RetryFixed, RetryRange, RetryRule  # noqa
+from .lib.time_semaphore import TimeSemaphore  # noqa
